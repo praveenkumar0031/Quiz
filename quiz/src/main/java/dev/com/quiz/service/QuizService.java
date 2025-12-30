@@ -3,43 +3,76 @@ package dev.com.quiz.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import dev.com.quiz.DTO.*;
 import dev.com.quiz.models.Question;
+import dev.com.quiz.models.User;
 import dev.com.quiz.repository.QesRepo;
+import dev.com.quiz.repository.UserRepo;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;@Service
+import java.util.Optional;
+@Service
 public class QuizService {
 
     private final QesRepo quizDb;
     private final ObjectMapper mapper = new ObjectMapper();
-
-    public QuizService(QesRepo quizDb) {
+    private final UserRepo userDb;
+    public QuizService(QesRepo quizDb, UserRepo userDb) {
         this.quizDb = quizDb;
+        this.userDb = userDb;
     }
 
     public Optional<Question> getById(Integer id) {
         return quizDb.findById(id);
     }
 
-    public Question addQuestion(QuestionRequest request) {
+    public ResponseEntity<?> addQuestion(QuestionRequest request) {
         try {
+            User user = userDb.findById(request.getUserId())
+                    .orElseThrow(() ->
+                            new RuntimeException("User not found: " + request.getUserId()));
             Question q = new Question();
-            q.setQuestion(request.getQuestion());
-            q.setOptions(
-                    mapper.writeValueAsString(request.getOptions())
-            );
-            q.setAnswerIndex(request.getAnswerIndex());
-
-            return quizDb.save(q);
+            if(user.getIsAdmin()) {
+                q.setQuestion(request.getQuestion());
+                q.setOptions(
+                        mapper.writeValueAsString(request.getOptions())
+                );
+                q.setAnswer(request.getAnswer());
+                quizDb.save(q);
+                return ResponseEntity.ok("Question added");
+            }
+            return ResponseEntity.ok("Required Access");
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to save question", e);
         }
     }
 
+    public List<Question> addMultipleQuestions(List<QuestionRequest> requests) {
+
+
+        List<Question> questions = new ArrayList<>();
+
+        for (QuestionRequest request : requests) {
+            try {
+                Question q = new Question();
+                q.setQuestion(request.getQuestion());
+                q.setOptions(mapper.writeValueAsString(request.getOptions()));
+                q.setAnswer(request.getAnswer());
+
+
+                questions.add(q);
+
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to parse options JSON", e);
+            }
+        }
+
+        return quizDb.saveAll(questions);
+    }
     public List<QuestionResponse> getAll() {
 
         return quizDb.findAll().stream().map(q -> {
@@ -66,11 +99,15 @@ public class QuizService {
                 .orElseThrow(() -> new RuntimeException("Question not found"));
 
 
-        return question.getAnswerIndex() == request.getSelectedIndex();
+        return question.getAnswer() == request.getSelectedIndex();
     }
 
     public List<AnswerResult> checkMultipleAnswers(QuizSubmissionRequest request) {
         List<AnswerResult> results = new ArrayList<>();
+        int score=0;
+        User user = userDb.findById(request.getUserId())
+                .orElseThrow(() ->
+                        new RuntimeException("User not found: " + request.getUserId()));
 
         for (AnswerRequest ans : request.getAnswers()) {
             if (ans.getQuestionId() == null) {
@@ -80,10 +117,14 @@ public class QuizService {
             Question q = quizDb.findById(ans.getQuestionId())
                     .orElseThrow(() -> new RuntimeException("Question not found: " + ans.getQuestionId()));
 
-            boolean correct = q.getAnswerIndex() == ans.getSelectedIndex();
-            results.add(new AnswerResult(ans.getQuestionId(), correct));
+            boolean correct = q.getAnswer() == ans.getSelectedIndex();
+            if(correct){
+            score++;
+            }
+            results.add(new AnswerResult(ans.getQuestionId(), correct,q.getAnswer()));
         }
-
+        user.setScore(user.getScore() + score);
+        userDb.save(user);
         return results;
     }
 

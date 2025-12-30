@@ -20,7 +20,8 @@ public class Question {
     @Column(columnDefinition = "json")
     private String options;
 
-    private int answerIndex;
+    @Column(name = "answer_index")
+    private Integer answer;
     public Question() {
     }
 

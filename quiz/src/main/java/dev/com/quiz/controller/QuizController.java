@@ -32,13 +32,22 @@ public class QuizController {
     @GetMapping("/question")
     public Optional<Question> getQuestionById(@RequestParam int no){
 
-        System.out.println(quizService.getById(no));
+        //System.out.println(quizService.getById(no));
         return quizService.getById(no);
     }
     @PostMapping("/question/add")
     public ResponseEntity<?> add(@RequestBody QuestionRequest request) {
-        quizService.addQuestion(request);
-        return ResponseEntity.ok("Question added");
+        return quizService.addQuestion(request);
+    }
+    @PostMapping("/question/addAll")
+    public ResponseEntity<?> addBulk(@RequestBody List<QuestionRequest> requests) {
+
+        if (requests == null || requests.isEmpty()) {
+            return ResponseEntity.badRequest().body("Question list cannot be empty");
+        }
+
+        quizService.addMultipleQuestions(requests);
+        return ResponseEntity.ok("Questions added successfully");
     }
     @PostMapping("/submit")
     public ResponseEntity<Map<String, Object>> submitAnswer(@Valid @RequestBody AnswerRequest request) {
@@ -60,6 +69,7 @@ public class QuizController {
         Map<String, Object> response = new HashMap<>();
         response.put("results", results);
         response.put("score", score);
+
 
         return ResponseEntity.ok(response);
     }

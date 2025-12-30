@@ -8,6 +8,7 @@ import java.util.List;
 public class QuestionRequest {
     private String question;
     private List<String> options;
-    private int answerIndex;
+    private Integer answer;
+    private Integer userId;
 }
 
