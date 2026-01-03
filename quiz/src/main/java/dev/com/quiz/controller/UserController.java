@@ -1,5 +1,6 @@
 package dev.com.quiz.controller;
 
+import dev.com.quiz.DTO.UserResponse;
 import dev.com.quiz.models.User;
 import dev.com.quiz.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -26,13 +27,13 @@ public class UserController {
 
 
     @GetMapping("/all")
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.findAll());
     }
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Integer id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Integer id) {
         return userService.getById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -40,19 +41,19 @@ public class UserController {
 
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(
+    public ResponseEntity<UserResponse> updateUser(
             @PathVariable Integer id,
             @RequestBody User user) {
 
-        User updatedUser = userService.update(id, user);
+        UserResponse updatedUser = userService.update(id, user);
         return ResponseEntity.ok(updatedUser);
     }
 
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
         userService.delete(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok("Successfully Deleted User");
     }
 
 

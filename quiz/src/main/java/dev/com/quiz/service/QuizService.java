@@ -25,8 +25,25 @@ public class QuizService {
         this.userDb = userDb;
     }
 
-    public Optional<Question> getById(Integer id) {
-        return quizDb.findById(id);
+    public Optional<QuestionResponse> getById(Integer id) {
+        return quizDb.findById(id).map(qes -> {
+            QuestionResponse dto = new QuestionResponse();
+            dto.setId(qes.getId());
+            dto.setQuestion(qes.getQuestion());
+
+            try {
+                dto.setOptions(
+                        mapper.readValue(
+                                qes .getOptions(),
+                                new TypeReference<List<String>>() {}
+                        )
+                );
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to parse options JSON", e);
+            }
+
+            return dto;
+        });
     }
 
     public ResponseEntity<?> addQuestion(QuestionRequest request) {
@@ -101,32 +118,55 @@ public class QuizService {
 
         return question.getAnswer() == request.getSelectedIndex();
     }
-
     public List<AnswerResult> checkMultipleAnswers(QuizSubmissionRequest request) {
-        List<AnswerResult> results = new ArrayList<>();
-        int score=0;
+
+        if (request.getAnswers() == null || request.getAnswers().isEmpty()) {
+            throw new RuntimeException("Answer list cannot be empty");
+        }
+
         User user = userDb.findById(request.getUserId())
                 .orElseThrow(() ->
                         new RuntimeException("User not found: " + request.getUserId()));
 
+        List<AnswerResult> results = new ArrayList<>();
+        int score = 0;
+
         for (AnswerRequest ans : request.getAnswers()) {
+
             if (ans.getQuestionId() == null) {
                 throw new RuntimeException("Question ID cannot be null");
             }
 
-            Question q = quizDb.findById(ans.getQuestionId())
-                    .orElseThrow(() -> new RuntimeException("Question not found: " + ans.getQuestionId()));
-
-            boolean correct = q.getAnswer() == ans.getSelectedIndex();
-            if(correct){
-            score++;
+            if (ans.getSelectedIndex() == null) {
+                throw new RuntimeException("Selected option cannot be null");
             }
-            results.add(new AnswerResult(ans.getQuestionId(), correct,q.getAnswer()));
+
+            Question q = quizDb.findById(ans.getQuestionId())
+                    .orElseThrow(() ->
+                            new RuntimeException("Question not found: " + ans.getQuestionId()));
+
+            boolean correct = q.getAnswer().equals(ans.getSelectedIndex());
+
+            if (correct) {
+                score++;
+            }
+
+            results.add(
+                    new AnswerResult(
+                            ans.getQuestionId(),
+                            correct,
+                            q.getAnswer()
+                    )
+            );
         }
+
+
         user.setScore(user.getScore() + score);
         userDb.save(user);
+
         return results;
     }
+
 
     public void deleteQuestion(Integer questionId) {
         if (!quizDb.existsById(questionId)) {

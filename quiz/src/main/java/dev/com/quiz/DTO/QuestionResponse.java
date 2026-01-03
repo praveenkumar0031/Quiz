@@ -7,7 +7,6 @@ import java.util.List;
 @Data
 public class QuestionResponse {
     private Integer id;
-    private Integer userId;
     private String question;
     private List<String> options;
 }

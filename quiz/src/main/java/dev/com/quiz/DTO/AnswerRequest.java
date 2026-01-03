@@ -7,5 +7,5 @@ import lombok.Data;
 public class AnswerRequest {
     @NotBlank
     private Integer questionId;
-    private int selectedIndex;
+    private Integer selectedIndex;
 }

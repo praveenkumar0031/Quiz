@@ -19,8 +19,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/quiz")
 public class QuizController {
-    @Autowired
-    private QuizService quizService;
+
+    private final QuizService quizService;
     public QuizController(QuizService quizService) {
         this.quizService = quizService;
     }
@@ -30,9 +30,7 @@ public class QuizController {
     }
 
     @GetMapping("/question")
-    public Optional<Question> getQuestionById(@RequestParam int no){
-
-        //System.out.println(quizService.getById(no));
+    public Optional<QuestionResponse> getQuestionById(@RequestParam int no){
         return quizService.getById(no);
     }
     @PostMapping("/question/add")
@@ -74,7 +72,7 @@ public class QuizController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/reset  /{id}")
+    @DeleteMapping("/reset/{id}")
     public ResponseEntity<Map<String, String>> deleteQuestion(@PathVariable Integer id) {
         quizService.deleteQuestion(id);
         return ResponseEntity.ok(Map.of("message", "Question deleted successfully"));

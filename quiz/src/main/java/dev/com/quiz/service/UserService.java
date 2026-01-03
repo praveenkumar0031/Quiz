@@ -1,11 +1,15 @@
 package dev.com.quiz.service;
 
+import dev.com.quiz.DTO.UserResponse;
 import dev.com.quiz.Utils.PasswordUtil;
+
 
 import dev.com.quiz.models.User;
 import dev.com.quiz.repository.UserRepo;
+
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 @Service
@@ -17,6 +21,7 @@ public class UserService {
     public UserService(UserRepo userRepo) {
         this.userRepo = userRepo;
 
+
     }
 
 
@@ -25,23 +30,50 @@ public class UserService {
         return userRepo.save(user);
     }
 
-    public List<User> findAll() {
-        return userRepo.findAll();
+    public List<UserResponse> findAll() {
+
+        List<User> users=userRepo.findAll();
+        List<UserResponse> userResponses = new ArrayList<>();
+        for(User user:users){
+            try {
+                UserResponse userResponse = new UserResponse();
+                userResponse.setUsername(user.getUsername());
+                userResponse.setScore(user.getScore());
+                userResponse.setUserid(user.getId());
+                userResponses.add(userResponse);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to Get All Users", e);
+            }
+        }
+        return userResponses;
     }
 
 
-    public Optional<User> getById(Integer id) {
-        return userRepo.findById(id);
+    public Optional<UserResponse> getById(Integer id) {
+        return userRepo.findById(id)
+                .map(user -> {
+                    UserResponse response = new UserResponse();
+                    response.setUserid(user.getId());
+                    response.setUsername(user.getUsername());
+                    response.setScore(user.getScore());
+                    return response;
+                });
+
     }
 
 
-    public User update(Integer id, User user) {
+    public UserResponse update(Integer id, User user) {
         return userRepo.findById(id)
                 .map(existingUser -> {
+                    UserResponse response = new UserResponse();
+                    response.setUserid(existingUser.getId());
+                    response.setUsername(existingUser.getUsername());
+                    response.setScore(existingUser.getScore());
                     existingUser.setUsername(user.getUsername());
-                    existingUser.setPassword(user.getPassword());
+                    existingUser.setPassword(PasswordUtil.hashPassword(user.getPassword()));
                     existingUser.setIsAdmin(user.getIsAdmin());
-                    return userRepo.save(existingUser);
+                    userRepo.save(existingUser);
+                    return response;
                 })
                 .orElseThrow(() -> new RuntimeException("User not found with id " + id));
     }

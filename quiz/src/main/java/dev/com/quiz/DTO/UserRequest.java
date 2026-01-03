@@ -11,8 +11,5 @@ public class UserRequest {
     private String password;
     private boolean isAdmin;
 }
-@Data
-class UserResponse{
-    private String username;
-}
+
 
